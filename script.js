@@ -31,16 +31,21 @@ async function run(dataToSearch) {
       modifiedSrcs.push(src);
     }
   });
-  const randomSrc =
-    modifiedSrcs[Math.floor(Math.random() * modifiedSrcs.length)];
+  // const randomSrc =
+  //   modifiedSrcs[Math.floor(Math.random() * modifiedSrcs.length)];
+  const folder = fs.mkdirSync(`${dataToSearch}`);
 
-  https.get(randomSrc, (res) => {
-    const stream = fs.createWriteStream("picture.png");
-    res.pipe(stream);
-    stream.on("finish", () => {
-      stream.close();
+  for (let i = 0; i < modifiedSrcs.length; i++) {
+    https.get(modifiedSrcs[i], (res) => {
+      const stream = fs.createWriteStream(
+        `${dataToSearch}/picture${i + 1}.png`
+      );
+      res.pipe(stream);
+      stream.on("finish", () => {
+        stream.close();
+      });
     });
-  });
+  }
   await browser.close();
 }
 
@@ -48,7 +53,7 @@ const getDataFromUser = () => {
   let rl = readline.createInterface(process.stdin, process.stdout);
   let dataToSearch = "";
 
-  rl.question("Insert data to search ", (data) => {
+  rl.question("Insert data to search: ", (data) => {
     dataToSearch = data;
     run(dataToSearch);
   });
