@@ -1,7 +1,8 @@
 const puppeteer = require("puppeteer");
-
-async function run() {
-  let dataToSearch = "cat";
+const fs = require("fs");
+const https = require("https");
+const readline = require("readline");
+async function run(dataToSearch) {
   let modifiedSrcs = [];
 
   const browser = await puppeteer.launch({
@@ -30,26 +31,27 @@ async function run() {
       modifiedSrcs.push(src);
     }
   });
-
   const randomSrc =
     modifiedSrcs[Math.floor(Math.random() * modifiedSrcs.length)];
 
-  const boundingBox = await page.evaluate((src) => {
-    const img = document.querySelector(`img[src="${src}"]`);
-    const { x, y, width, height } = img.getBoundingClientRect();
-    return { x, y, width, height };
-  }, randomSrc);
-
-  
-  boundingBox.x += 9;
-
-  
-  await page.screenshot({
-    path: 'screenshot_image.jpg',
-    clip: boundingBox,
+  https.get(randomSrc, (res) => {
+    const stream = fs.createWriteStream("picture.png");
+    res.pipe(stream);
+    stream.on("finish", () => {
+      stream.close();
+    });
   });
-
-   await browser.close();
+  await browser.close();
 }
 
-run();
+const getDataFromUser = () => {
+  let rl = readline.createInterface(process.stdin, process.stdout);
+  let dataToSearch = "";
+
+  rl.question("Insert data to search ", (data) => {
+    dataToSearch = data;
+    run(dataToSearch);
+  });
+};
+
+getDataFromUser();
