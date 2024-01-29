@@ -2,7 +2,13 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const https = require("https");
 
+/**
+ *  Runs script
+ *
+ * @param {string} dataToSearch
+ */
 const run = async (dataToSearch) => {
+  fs.mkdirSync(`zdjecia`);
   for (let i = 0; i < dataToSearch.length; i++) {
     const browser = await puppeteer.launch({
       headless: false,
@@ -11,7 +17,9 @@ const run = async (dataToSearch) => {
     const modifiedSrcs = [];
 
     const page = await browser.newPage();
-    await page.goto(`https://www.pexels.com/pl-pl/szukaj/${dataToSearch[i]}`);
+    await page.goto(`https://www.pexels.com/pl-pl/szukaj/${dataToSearch[i]}`, {
+      waitUntil: "domcontentloaded",
+    });
     await page.setViewport({ width: 1920, height: 1080 });
     await scrollDown(page, 1000);
     const images = await page.$$("img");
@@ -32,12 +40,12 @@ const run = async (dataToSearch) => {
       }
     });
 
-    fs.mkdirSync(`${dataToSearch[i]}`);
+    fs.mkdirSync(`zdjecia/${dataToSearch[i]}`);
 
     for (let j = 0; j < modifiedSrcs.length; j++) {
       https.get(modifiedSrcs[j], (res) => {
         const stream = fs.createWriteStream(
-          `${dataToSearch[i]}/picture${j + 1}.png`
+          `zdjecia/${dataToSearch[i]}/picture${j + 1}.png`
         );
         res.pipe(stream);
         stream.on("finish", () => {
@@ -50,7 +58,10 @@ const run = async (dataToSearch) => {
     await browser.close();
   }
 };
-
+/**
+ * Gets data from "frazy.txt" file, then run a "run" function
+ *
+ */
 const getDataFromFile = async () => {
   const dataToSearch = await fs
     .readFileSync("./frazy.txt", { encoding: "utf8" })
@@ -58,7 +69,13 @@ const getDataFromFile = async () => {
 
   run(dataToSearch);
 };
-
+/**
+ *
+ * Scrolls down to the bottom of the page or to the maximum number of scrolls
+ *
+ * @param {puppeteer.Page} page
+ * @param {number} maxScrolls
+ */
 const scrollDown = async (page, maxScrolls) => {
   await page.evaluate(async (maxScrolls) => {
     await new Promise((resolve) => {
