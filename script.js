@@ -21,8 +21,10 @@ const run = async (dataToSearch) => {
       waitUntil: "domcontentloaded",
     });
     await page.setViewport({ width: 1920, height: 1080 });
-    await scrollDown(page, 1000);
+    await scrollDown(page, 1000); //Change the scroll count
     const images = await page.$$("img");
+
+    //get src attribute of image
 
     const srcs = await Promise.all(
       images.map(async (image) => {
@@ -42,7 +44,12 @@ const run = async (dataToSearch) => {
 
     fs.mkdirSync(`zdjecia/${dataToSearch[i]}`);
 
+    //download picture and save it on disk
+
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
     for (let j = 0; j < modifiedSrcs.length; j++) {
+      await delay(500);
       https.get(modifiedSrcs[j], (res) => {
         const stream = fs.createWriteStream(
           `zdjecia/${dataToSearch[i]}/picture${j + 1}.png`
@@ -53,7 +60,7 @@ const run = async (dataToSearch) => {
         });
       });
     }
-
+    await convertResolutionTo1920(modifiedSrcs, dataToSearch[i]);
     await page.close();
     await browser.close();
   }
@@ -97,9 +104,47 @@ const scrollDown = async (page, maxScrolls) => {
           clearInterval(timer);
           resolve();
         }
-      }, 50);
+      }, 100);
     });
   }, maxScrolls); // pass maxScrolls to the function
+};
+
+/**
+ *Converts resolution of picture to 1920 pixels
+ *
+ * @param {string[]} modifiedSrcs
+ */
+const convertResolutionTo1920 = async (modifiedSrcs, dataToSearch) => {
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const resolution = "&w=1920";
+  const changedResSrcs = [];
+  fs.mkdirSync(`zdjecia/duze`);
+
+  const downloadPromises = [];
+
+  for (let i = 0; i < modifiedSrcs.length; i++) {
+    changedResSrcs.push(modifiedSrcs[i].replace("&w=500", resolution));
+  }
+
+  for (let j = 0; j < changedResSrcs.length; j++) {
+    await delay(500);
+    const promise = new Promise((resolve) => {
+      https.get(changedResSrcs[j], (res) => {
+        const stream = fs.createWriteStream(
+          `zdjecia/duze/picture${j + 1}_${dataToSearch}.png`
+        );
+        res.pipe(stream);
+        stream.on("finish", () => {
+          stream.close();
+          resolve();
+        });
+      });
+    });
+
+    downloadPromises.push(promise);
+  }
+
+  await Promise.all(downloadPromises);
 };
 
 getDataFromFile();
